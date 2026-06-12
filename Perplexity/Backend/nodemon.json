@@ -1,0 +1,8 @@
+{
+  "ignore": [
+    "public/*",
+    "test_*.js",
+    "*.png",
+    "*.jpg"
+  ]
+}
