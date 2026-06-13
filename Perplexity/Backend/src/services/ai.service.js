@@ -27,7 +27,9 @@ const mistralModel = new ChatMistralAI({
 });
 
 async function formatMessagesForAI(messages) {
-  const formattedMessages = [];
+  const formattedMessages = [
+    new SystemMessage("Your name is Nexora AI. You are a helpful AI assistant. If the user asks what your name is or who you are, you must answer: 'hi i am a nexora ai.'")
+  ];
   for (const e of messages) {
     if (e.role === "user") {
       if (e.attachedImageUrl) {
@@ -97,7 +99,10 @@ async function formatMessagesForAI(messages) {
 }
 
 function formatMessagesTextOnly(messages) {
-  return messages.map((e) => {
+  const formatted = [
+    new SystemMessage("Your name is Nexora AI. You are a helpful AI assistant. If the user asks what your name is or who you are, you must answer: 'hi i am a nexora ai.'")
+  ];
+  return formatted.concat(messages.map((e) => {
     if (e.role === "user") {
       return new HumanMessage(e.content || "");
     } else if (e.role === "system") {
@@ -105,7 +110,7 @@ function formatMessagesTextOnly(messages) {
     } else {
       return new AIMessage(e.content || "");
     }
-  });
+  }));
 }
 
 export async function generateRresponse(messages) {
