@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "../hooks/useChat";
+import { useVoice } from "../hooks/useVoice";
+import VoiceOverlay from "../components/VoiceOverlay";
 import { setCurrentChatId,  setSuggestions, } from "../chat.slice";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -189,6 +191,55 @@ const Dashboard = () => {
   });
   const [activeMenuChatId, setActiveMenuChatId] = useState(null);
   const dropdownRef = React.useRef(null);
+
+  const [isVoiceOpen, setIsVoiceOpen] = useState(false);
+
+  const handleFinalVoiceTranscript = async (text) => {
+    if (!text || isLoading) return;
+    setHasSearched(true);
+    setInputText("");
+    setVoiceState("processing");
+    try {
+      const res = await handleSendMessage({
+        message: text,
+        chatId: currentChatId,
+        isImage: false,
+        attachedImageUrl: null,
+        isVoice: true,
+      });
+      if (res && res.content) {
+        speakText(res.content);
+      } else {
+        setVoiceState("idle");
+      }
+    } catch (err) {
+      console.error("Failed to send voice message:", err);
+      setVoiceState("idle");
+    }
+  };
+
+  const {
+    voiceState,
+    setVoiceState,
+    startListening,
+    stopListening,
+    stopSpeaking,
+    isMuted,
+    setIsMuted,
+    speakingRate,
+    setSpeakingRate,
+    errorMessage,
+    transcript,
+    speakText,
+  } = useVoice({
+    onFinalTranscript: handleFinalVoiceTranscript,
+  });
+
+  useEffect(() => {
+    if (voiceState === "listening" && transcript) {
+      setInputText(transcript);
+    }
+  }, [transcript, voiceState]);
 
   // Resize listener
   useEffect(() => {
@@ -1177,7 +1228,14 @@ const handleDownloadChat = () => {
                       <polyline points="6 9 12 15 18 9" />
                     </svg>
                   </button>
-                  <button className="mic-btn">
+                  <button
+                    type="button"
+                    className="mic-btn"
+                    onClick={() => {
+                      setIsVoiceOpen(true);
+                      startListening();
+                    }}
+                  >
                     <svg
                       width="18"
                       height="18"
@@ -1416,7 +1474,14 @@ const handleDownloadChat = () => {
                       <polyline points="6 9 12 15 18 9" />
                     </svg>
                   </button>
-                  <button className="mic-btn">
+                  <button
+                    type="button"
+                    className="mic-btn"
+                    onClick={() => {
+                      setIsVoiceOpen(true);
+                      startListening();
+                    }}
+                  >
                     <svg
                       width="18"
                       height="18"
@@ -1635,6 +1700,26 @@ const handleDownloadChat = () => {
           </div>
         </div>
       )}
+
+      {/* Voice Overlay */}
+      <VoiceOverlay
+        isOpen={isVoiceOpen}
+        onClose={() => {
+          stopListening();
+          stopSpeaking();
+          setIsVoiceOpen(false);
+        }}
+        voiceState={voiceState}
+        startListening={startListening}
+        stopListening={stopListening}
+        stopSpeaking={stopSpeaking}
+        isMuted={isMuted}
+        setIsMuted={setIsMuted}
+        speakingRate={speakingRate}
+        setSpeakingRate={setSpeakingRate}
+        errorMessage={errorMessage}
+        transcript={transcript}
+      />
     </div>
   );
 };

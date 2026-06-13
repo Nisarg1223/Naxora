@@ -47,7 +47,7 @@ export const useChat = () => {
   const dispatch = useDispatch();
   const chats = useSelector((state) => state.chat.chats);
 
-  async function handleSendMessage({ message, chatId, isImage, attachedImageUrl }) {
+  async function handleSendMessage({ message, chatId, isImage, attachedImageUrl, isVoice }) {
     try {
       // Clear any remaining queue from previous streams
       if (typingTimer) {
@@ -91,7 +91,7 @@ export const useChat = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message, chat: chatId || null, isImage, attachedImageUrl }),
+        body: JSON.stringify({ message, chat: chatId || null, isImage, attachedImageUrl, isVoice }),
         credentials: "include", // Send session cookies for authMiddleware
       });
 
@@ -105,6 +105,7 @@ export const useChat = () => {
       
       let isFirstChunk = true;
       let realChatId = chatId;
+      let fullText = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -138,6 +139,7 @@ export const useChat = () => {
               } else if (data.type === "chunk") {
                 const { content } = data;
                 if (content) {
+                  fullText += content;
                   if (isFirstChunk) {
                     isFirstChunk = false;
                     dispatch(setLoading(false)); // Hide thinking dots when typing begins
@@ -188,7 +190,7 @@ export const useChat = () => {
         }
       }
 
-      return realChatId;
+      return { chatId: realChatId, content: fullText };
     } catch (error) {
       const status = error.response?.status;
       if (status === 429) {

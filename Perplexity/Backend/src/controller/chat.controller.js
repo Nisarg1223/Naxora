@@ -10,7 +10,7 @@ import MessageModel from "../models/message.model.js";
 
 export async function sendMessage(req, res) {
   try {
-    const { message, chat: chatId, isImage, attachedImageUrl } = req.body;
+    const { message, chat: chatId, isImage, attachedImageUrl, isVoice } = req.body;
 
     const imageRegex = /^\s*(\/image\s+|generate\s+(an?|the)\s+image\s+|generate\s+image\s+|draw\s+|create\s+(an?|the)\s+(image|picture|artwork)\s+|create\s+(image|picture|artwork)\s+)/i;
     const hasImagePrefix = imageRegex.test(message) || message.toLowerCase() === "generate image";
@@ -91,7 +91,15 @@ export async function sendMessage(req, res) {
     let fullResponse = "";
 
     // Stream the AI response
-    await streamResponse(messages, (chunk) => {
+    const messagesToSend = [...messages];
+    if (isVoice) {
+      messagesToSend.push({
+        role: "system",
+        content: "Keep your response extremely brief, no more than 2 or 3 lines of conversational text. Do not use markdown formatting, bullet points, list items, or code blocks."
+      });
+    }
+
+    await streamResponse(messagesToSend, (chunk) => {
       fullResponse += chunk;
       res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
     });

@@ -87,6 +87,8 @@ async function formatMessagesForAI(messages) {
       } else {
         formattedMessages.push(new HumanMessage(e.content || ""));
       }
+    } else if (e.role === "system") {
+      formattedMessages.push(new SystemMessage(e.content || ""));
     } else {
       formattedMessages.push(new AIMessage(e.content || ""));
     }
@@ -98,6 +100,8 @@ function formatMessagesTextOnly(messages) {
   return messages.map((e) => {
     if (e.role === "user") {
       return new HumanMessage(e.content || "");
+    } else if (e.role === "system") {
+      return new SystemMessage(e.content || "");
     } else {
       return new AIMessage(e.content || "");
     }
