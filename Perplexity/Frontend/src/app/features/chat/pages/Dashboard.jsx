@@ -7,7 +7,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import "./Dashboard.scss";
 import axios from "axios";
-import { getImages, uploadImage } from "../service/chat.api.js";
+import { getImages, uploadImage, deleteChat } from "../service/chat.api.js";
 const CodeBlock = ({ language, value }) => {
   const [copied, setCopied] = useState(false);
  
@@ -155,9 +155,8 @@ const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [inputText, setInputText] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
-  const [loadingSuggestions, setLoadingSuggestions] =
-  useState(false);
-   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isImageMode, setIsImageMode] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [attachedImage, setAttachedImage] = useState(null);
@@ -167,9 +166,7 @@ const Dashboard = () => {
   const isLoading = useSelector((state) => state.chat.isLoading);
   const { user } = useSelector((state) => state.auth) || { user: null };
   const dispatch = useDispatch();
-const suggestions = useSelector(
-  (state) => state.chat.suggestions
-);
+  const suggestions = useSelector((state) => state.chat.suggestions);
   const {
     handleGetChat,
     handleGetMessages,
@@ -177,6 +174,86 @@ const suggestions = useSelector(
     handleSendMessage,
   } = useChat();
   const currentChatId = useSelector((state) => state.chat.currentChatId);
+
+  // Search and responsive state variables
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFilter, setSearchFilter] = useState("all"); // 'all', 'images'
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [pinnedChatIds, setPinnedChatIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("nexora_pinned_chats") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [activeMenuChatId, setActiveMenuChatId] = useState(null);
+  const dropdownRef = React.useRef(null);
+
+  // Resize listener
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Keyboard shortcut listener (Ctrl+K to open search, Esc to close)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+      if (e.key === "Escape") {
+        setIsSearchOpen(false);
+        setActiveMenuChatId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Outside click listener to close chat menu dropdowns
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setActiveMenuChatId(null);
+      }
+    };
+    if (activeMenuChatId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [activeMenuChatId]);
+
+  // Chat pinning handler
+  const togglePinChat = (chatId, e) => {
+    if (e) e.stopPropagation();
+    const updated = pinnedChatIds.includes(chatId)
+      ? pinnedChatIds.filter(id => id !== chatId)
+      : [...pinnedChatIds, chatId];
+    setPinnedChatIds(updated);
+    localStorage.setItem("nexora_pinned_chats", JSON.stringify(updated));
+  };
+
+  // Chat deletion handler
+  const handleDeleteChat = async (chatId, e) => {
+    if (e) e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this chat?")) {
+      try {
+        await deleteChat(chatId);
+        await handleGetChat();
+        if (currentChatId === chatId) {
+          dispatch(setCurrentChatId(null));
+          setHasSearched(false);
+        }
+      } catch (err) {
+        console.error("Failed to delete chat:", err);
+      }
+    }
+  };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -281,6 +358,68 @@ const handleDownloadChat = () => {
     return currentChat.messages.filter(msg => msg.role === "ai" && msg.isImage && msg.imageUrl);
   }, [currentChat]);
 
+  const sortedChats = useMemo(() => {
+    const allChats = Object.values(chats);
+    const pinned = allChats
+      .filter(chat => pinnedChatIds.includes(chat.id))
+      .sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
+    const unpinned = allChats
+      .filter(chat => !pinnedChatIds.includes(chat.id))
+      .sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
+    return [...pinned, ...unpinned];
+  }, [chats, pinnedChatIds]);
+
+  const filteredChatsList = useMemo(() => {
+    let chatsArray = Object.values(chats);
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      chatsArray = chatsArray.filter(chat => 
+        chat.title && chat.title.toLowerCase().includes(query)
+      );
+    }
+
+    if (searchFilter === "images") {
+      const chatsWithImages = new Set(allGeneratedImages.map(img => img.chat));
+      chatsArray = chatsArray.filter(chat => chatsWithImages.has(chat.id));
+    }
+
+    return chatsArray.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
+  }, [chats, searchQuery, searchFilter, allGeneratedImages]);
+
+  const groupChatsByDate = (chatsList) => {
+    const groups = {
+      Today: [],
+      Yesterday: [],
+      "Previous 7 Days": [],
+      "Previous 30 Days": [],
+      "Older": []
+    };
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
+    const sevenDaysAgoStart = todayStart - 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgoStart = todayStart - 30 * 24 * 60 * 60 * 1000;
+
+    chatsList.forEach(chat => {
+      const time = new Date(chat.lastUpdated || 0).getTime();
+      if (time >= todayStart) {
+        groups.Today.push(chat);
+      } else if (time >= yesterdayStart) {
+        groups.Yesterday.push(chat);
+      } else if (time >= sevenDaysAgoStart) {
+        groups["Previous 7 Days"].push(chat);
+      } else if (time >= thirtyDaysAgoStart) {
+        groups["Previous 30 Days"].push(chat);
+      } else {
+        groups["Older"].push(chat);
+      }
+    });
+
+    return Object.fromEntries(Object.entries(groups).filter(([_, v]) => v.length > 0));
+  };
+
   useEffect(() => {
     setActiveTab("answer");
   }, [currentChatId]);
@@ -346,6 +485,15 @@ const handleDownloadChat = () => {
 
   useEffect(() => {
     handleGetChat();
+    const fetchImages = async () => {
+      try {
+        const data = await getImages();
+        setAllGeneratedImages(data.images || []);
+      } catch (err) {
+        console.error("Failed to fetch image library:", err);
+      }
+    };
+    fetchImages();
   }, []);
 
   useEffect(() => {
@@ -415,115 +563,328 @@ const handleDownloadChat = () => {
       )}
 
       <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-top">
-          <div className="logo-container">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-            <button
-              className="sidebar-toggle"
-              onClick={() => setIsSidebarOpen(false)}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <line x1="9" y1="3" x2="9" y2="21" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="new-thread-btn-wrapper">
-            <button
-              className="new-thread-btn"
-              onClick={() => {
-                setHasSearched(false);
-                setInputText("");
-
-              
-                dispatch(setCurrentChatId(null));
-              }}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              <span>New</span>
-            </button>
-          </div>
-          <div className="history-section">
-            <div className="history-list">
-              {Object.values(chats)
-                .sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0))
-                .map((chat) => (
-                <div
-                  key={chat.id}
-                  className={`history-item ${
-                    currentChatId === chat.id ? "active" : ""
-                  }`}
-                  onClick={async () => {
-                    setHasSearched(true);
-
-                    await handleGetMessages(chat.id);
-                  }}
+        {isSearchOpen && isMobile ? (
+          <div className="mobile-search-sidebar-view">
+            <div className="mobile-search-header">
+              <button className="back-btn" onClick={() => setIsSearchOpen(false)}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <span>{chat.title}</span>
-                  <button
-                    className="more-btn"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+              </button>
+              <div className="search-pill-input">
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                />
+                {searchQuery && (
+                  <button className="clear-btn" onClick={() => setSearchQuery("")}>
                     <svg
                       width="14"
                       height="14"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
+                      strokeWidth="2.5"
                     >
-                      <circle cx="12" cy="12" r="1" />
-                      <circle cx="19" cy="12" r="1" />
-                      <circle cx="5" cy="12" r="1" />
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                   </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="sidebar-bottom">
-          <div className="user-profile">
-            <div className="user-info">
-              <div className="avatar">
-                <div className="status-dot"></div>
+                )}
               </div>
-              <span className="username">darjinisar49428</span>
+            </div>
+
+            <div className="mobile-search-filters">
+              <button
+                className={`filter-chip ${searchFilter === "all" ? "active" : ""}`}
+                onClick={() => setSearchFilter("all")}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Projects</span>
+              </button>
+              <button
+                className={`filter-chip ${searchFilter === "images" ? "active" : ""}`}
+                onClick={() => setSearchFilter("images")}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <span>Images</span>
+              </button>
+              <button className="filter-chip more-chip">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="1"></circle>
+                  <circle cx="19" cy="12" r="1"></circle>
+                  <circle cx="5" cy="12" r="1"></circle>
+                </svg>
+                <span>More</span>
+              </button>
+            </div>
+
+            <div className="mobile-search-results">
+              {/* Pinned section */}
+              {filteredChatsList.filter((c) => pinnedChatIds.includes(c.id)).length > 0 && (
+                <div className="results-group">
+                  <div className="group-header">Pinned</div>
+                  {filteredChatsList
+                    .filter((c) => pinnedChatIds.includes(c.id))
+                    .map((chat) => (
+                      <div
+                        key={chat.id}
+                        className={`result-item ${currentChatId === chat.id ? "active" : ""}`}
+                        onClick={async () => {
+                          setHasSearched(true);
+                          setIsSearchOpen(false);
+                          setIsSidebarOpen(false);
+                          await handleGetMessages(chat.id);
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="item-icon"
+                        >
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span>{chat.title}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* Recents section */}
+              <div className="results-group">
+                <div className="group-header">Recents</div>
+                {filteredChatsList
+                  .filter((c) => !pinnedChatIds.includes(c.id))
+                  .map((chat) => (
+                    <div
+                      key={chat.id}
+                      className={`result-item ${currentChatId === chat.id ? "active" : ""}`}
+                      onClick={async () => {
+                        setHasSearched(true);
+                        setIsSearchOpen(false);
+                        setIsSidebarOpen(false);
+                        await handleGetMessages(chat.id);
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="item-icon"
+                      >
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                      <span>{chat.title}</span>
+                    </div>
+                  ))}
+                {filteredChatsList.length === 0 && (
+                  <div className="no-results-msg">No chats found</div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="sidebar-top">
+              <div className="logo-container">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                <button
+                  className="sidebar-toggle"
+                  onClick={() => setIsSidebarOpen(false)}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="9" y1="3" x2="9" y2="21" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="sidebar-actions-row">
+                <button
+                  className="new-thread-btn"
+                  onClick={() => {
+                    setHasSearched(false);
+                    setInputText("");
+                    dispatch(setCurrentChatId(null));
+                  }}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span>New</span>
+                </button>
+                <button
+                  className="sidebar-search-btn"
+                  onClick={() => setIsSearchOpen(true)}
+                  title="Search chats (Ctrl+K)"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </button>
+              </div>
+              <div className="history-section">
+                <div className="history-list">
+                  {sortedChats.map((chat) => (
+                    <div
+                      key={chat.id}
+                      className={`history-item ${
+                        currentChatId === chat.id ? "active" : ""
+                      }`}
+                      onClick={async () => {
+                        setHasSearched(true);
+                        await handleGetMessages(chat.id);
+                      }}
+                    >
+                      <span className="history-item-title-wrapper">
+                        {pinnedChatIds.includes(chat.id) && (
+                          <svg className="pinned-indicator-icon" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+                            <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6l1.8 1.8 1.8-1.8v-6H18v-2l-2-2z"/>
+                          </svg>
+                        )}
+                        <span className="history-item-title">{chat.title}</span>
+                      </span>
+                      <div className="more-btn-container" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="more-btn"
+                          onClick={() => setActiveMenuChatId(activeMenuChatId === chat.id ? null : chat.id)}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <circle cx="12" cy="12" r="1" />
+                            <circle cx="19" cy="12" r="1" />
+                            <circle cx="5" cy="12" r="1" />
+                          </svg>
+                        </button>
+                        {activeMenuChatId === chat.id && (
+                          <div className="chat-action-dropdown" ref={dropdownRef}>
+                            <button onClick={(e) => togglePinChat(chat.id, e)}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6l1.8 1.8 1.8-1.8v-6H18v-2l-2-2z"/>
+                              </svg>
+                              <span>{pinnedChatIds.includes(chat.id) ? "Unpin" : "Pin"}</span>
+                            </button>
+                            <button className="delete-option" onClick={(e) => handleDeleteChat(chat.id, e)}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                              </svg>
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="sidebar-bottom">
+              <div className="user-profile">
+                <div className="user-info">
+                  <div className="avatar">
+                    <div className="status-dot"></div>
+                  </div>
+                  <span className="username">darjinisar49428</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </aside>
 
       <main
@@ -1130,6 +1491,146 @@ const handleDownloadChat = () => {
                 </svg>
                 Download
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Search Modal Overlay */}
+      {isSearchOpen && !isMobile && (
+        <div className="search-modal-overlay" onClick={() => setIsSearchOpen(false)}>
+          <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="search-modal-header">
+              <svg
+                className="search-input-icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search chats..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+              <button className="close-search-modal" onClick={() => setIsSearchOpen(false)}>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            <div className="search-modal-list">
+              <div
+                className="search-modal-item new-chat-option"
+                onClick={() => {
+                  setHasSearched(false);
+                  setInputText("");
+                  dispatch(setCurrentChatId(null));
+                  setIsSearchOpen(false);
+                }}
+              >
+                <svg
+                  className="item-icon"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+                <span>New chat</span>
+              </div>
+
+              {/* Pinned chats in desktop search */}
+              {filteredChatsList.filter((c) => pinnedChatIds.includes(c.id)).length > 0 && (
+                <div className="search-modal-group">
+                  <div className="group-title">Pinned</div>
+                  {filteredChatsList
+                    .filter((c) => pinnedChatIds.includes(c.id))
+                    .map((chat) => (
+                      <div
+                        key={chat.id}
+                        className={`search-modal-item ${currentChatId === chat.id ? "active" : ""}`}
+                        onClick={async () => {
+                          setHasSearched(true);
+                          setIsSearchOpen(false);
+                          await handleGetMessages(chat.id);
+                        }}
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="item-icon"
+                        >
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span className="chat-title-text">{chat.title}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* Date grouped chats */}
+              {Object.entries(
+                groupChatsByDate(filteredChatsList.filter((c) => !pinnedChatIds.includes(c.id)))
+              ).map(([groupName, groupChats]) => (
+                <div className="search-modal-group" key={groupName}>
+                  <div className="group-title">{groupName}</div>
+                  {groupChats.map((chat) => (
+                    <div
+                      key={chat.id}
+                      className={`search-modal-item ${currentChatId === chat.id ? "active" : ""}`}
+                      onClick={async () => {
+                        setHasSearched(true);
+                        setIsSearchOpen(false);
+                        await handleGetMessages(chat.id);
+                      }}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="item-icon"
+                      >
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                      <span className="chat-title-text">{chat.title}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+
+              {filteredChatsList.length === 0 && (
+                <div className="no-results-msg">No chats found</div>
+              )}
             </div>
           </div>
         </div>
