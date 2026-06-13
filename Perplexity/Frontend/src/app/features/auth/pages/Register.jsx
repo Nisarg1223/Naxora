@@ -1,105 +1,164 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { motion } from 'framer-motion';
+import { useAuth } from '../hooks/useAuth';
+import { setError } from '../../../auth.slice';
 import './auth.scss';
 
 const Register = () => {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [regSuccess, setRegSuccess] = useState(false);
+
+  const loading = useSelector(state => state.auth.loading);
+  const error = useSelector(state => state.auth.error);
+  const dispatch = useDispatch();
+  const { handleRegister } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    dispatch(setError(null));
+  }, [dispatch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    dispatch(setError(null));
     
-    try {
-      // TODO: Replace with actual backend API call
-      console.log('Register submitted:', { name, email, password });
-      
-      // Simulating an API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Handle successful registration here (e.g. redirect, save token)
-    } catch (error) {
-      console.error('Registration error:', error);
-    } finally {
-      setIsLoading(false);
+    const success = await handleRegister({ email, username, password });
+    if (success) {
+      setRegSuccess(true);
+      setTimeout(() => {
+        navigate('/login');
+      }, 2500);
     }
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>Create an account</h1>
-        <p className="subtitle">Sign up to get started with Perplexity</p>
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="name">Full Name</label>
-            <input 
-              type="text" 
-              id="name" 
-              placeholder="John Doe" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required 
-              disabled={isLoading}
-            />
+    <div className="auth-split-wrapper">
+      {/* Left side: Premium Image Banner */}
+      <div 
+        className="auth-left-banner" 
+        style={{ backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.4), rgba(0,0,0,0.1)), url('/auth_banner.jpg')` }}
+      >
+        <div className="banner-overlay-content">
+          <div className="banner-tag">
+            <span className="dot">•</span> NEXORA AI
           </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input 
-              type="email" 
-              id="email" 
-              placeholder="you@example.com" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required 
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input 
-              type="password" 
-              id="password" 
-              placeholder="••••••••" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required 
-              disabled={isLoading}
-            />
-          </div>
-
-          <button type="submit" className="btn-primary" disabled={isLoading}>
-            {isLoading ? 'Signing up...' : 'Sign Up'}
-          </button>
-        </form>
-
-        <div className="divider">or continue with</div>
-
-        <div className="social-login">
-          <button type="button" className="btn-social">
-            <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-            </svg>
-            Google
-          </button>
-          <button type="button" className="btn-social">
-            <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
-            </svg>
-            Facebook
-          </button>
+          <h2 className="banner-heading">Query Your Future</h2>
         </div>
+      </div>
 
-        <div className="auth-footer">
-          Already have an account? <Link to="/login">Sign in</Link>
+      {/* Right side: Dark Form Panel */}
+      <div className="auth-right-panel">
+        <div className="auth-form-container">
+          {/* Logo Header */}
+          <div className="auth-logo-header">
+            <img src="/logo_nexora.png" alt="Nexora AI" className="auth-brand-logo" />
+          </div>
+
+          <h1 className="auth-title">Create account</h1>
+          <p className="auth-subtitle">Join and query the future</p>
+
+          {regSuccess && (
+            <motion.div 
+              className="auth-success-banner"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <span className="success-icon">✓</span>
+              <span className="success-text">Registration successful! Redirecting to sign in...</span>
+            </motion.div>
+          )}
+
+          {error && !regSuccess && (
+            <motion.div 
+              className="auth-error-banner"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <span className="error-icon">⚠️</span>
+              <span className="error-text">{error}</span>
+            </motion.div>
+          )}
+
+          <form className="auth-form-element" onSubmit={handleSubmit}>
+            <div className="auth-input-group">
+              <label htmlFor="username">Username</label>
+              <div className="input-with-icon">
+                <span className="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </span>
+                <input 
+                  type="text" 
+                  id="username" 
+                  placeholder="Nisarg" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required 
+                  disabled={loading || regSuccess}
+                />
+              </div>
+            </div>
+
+            <div className="auth-input-group">
+              <label htmlFor="email">Email</label>
+              <div className="input-with-icon">
+                <span className="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                </span>
+                <input 
+                  type="email" 
+                  id="email" 
+                  placeholder="darjinisarg49@gmail.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required 
+                  disabled={loading || regSuccess}
+                />
+              </div>
+            </div>
+
+            <div className="auth-input-group">
+              <label htmlFor="password">Password</label>
+              <div className="input-with-icon">
+                <span className="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </span>
+                <input 
+                  type="password" 
+                  id="password" 
+                  placeholder="••••••••" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required 
+                  disabled={loading || regSuccess}
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="auth-submit-btn" disabled={loading || regSuccess}>
+              {loading ? (
+                <span className="btn-spinner"></span>
+              ) : (
+                'Create Account'
+              )}
+            </button>
+          </form>
+
+          <div className="auth-footer-note">
+            Already have an account? <Link to="/login">Sign in</Link>
+          </div>
         </div>
       </div>
     </div>
