@@ -1,5 +1,5 @@
 import {Router} from 'express'
-import { sendMessage,getChats,getMessages,deleteChat, getSuggestions, getGeneratedImages } from '../controller/chat.controller.js';
+import { sendMessage,getChats,getMessages,deleteChat, getSuggestions, getGeneratedImages ,  webSearch,} from '../controller/chat.controller.js';
 import { uploadImage } from '../controller/upload.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 const chatRouter = Router();
@@ -12,6 +12,11 @@ chatRouter.get(
   "/images",
   authMiddleware,
   getGeneratedImages
+);
+chatRouter.post(
+  "/web-search",
+  authMiddleware,
+  webSearch
 );
 chatRouter.get("/:chatId/messages",authMiddleware,getMessages);
 chatRouter.delete("/delete/:chatId",authMiddleware,deleteChat);

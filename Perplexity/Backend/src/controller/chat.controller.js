@@ -4,13 +4,14 @@ import {
   streamResponse,
   getTrendingNews,
   generateImage,
+   searchWeb,
 } from "../services/ai.service.js";
 import ChatModel from "../models/chat.model.js";
 import MessageModel from "../models/message.model.js";
 
 export async function sendMessage(req, res) {
   try {
-    const { message, chat: chatId, isImage, attachedImageUrl, isVoice } = req.body;
+    const { message, chat: chatId, isImage, attachedImageUrl, isVoice, isWebSearch } = req.body;
 
     const imageRegex = /^\s*(\/image\s+|generate\s+(an?|the)\s+image\s+|generate\s+image\s+|draw\s+|create\s+(an?|the)\s+(image|picture|artwork)\s+|create\s+(image|picture|artwork)\s+)/i;
     const hasImagePrefix = imageRegex.test(message) || message.toLowerCase() === "generate image";
@@ -89,9 +90,52 @@ export async function sendMessage(req, res) {
     }
 
     let fullResponse = "";
+    let searchContext = "";
+
+    if (isWebSearch) {
+      // 1. Send immediate web search feedback
+      res.write(`data: ${JSON.stringify({ type: "chunk", content: "🔍 *Searching the web...*\n\n" })}\n\n`);
+      fullResponse += "🔍 *Searching the web...*\n\n";
+
+      try {
+        const searchResult = await searchWeb(message);
+        if (searchResult) {
+          if (searchResult.results && searchResult.results.length > 0) {
+            searchResult.results.slice(0, 5).forEach((r) => {
+              searchContext += `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}\n\n`;
+            });
+          }
+          if (searchResult.images && searchResult.images.length > 0) {
+            searchContext += `Related Images found on the Web (you can include these in your response if relevant using markdown):\n`;
+            searchResult.images.slice(0, 5).forEach((img) => {
+              const url = typeof img === "string" ? img : img?.url;
+              const desc = typeof img === "object" ? img?.description || "Web Image" : "Web Image";
+              if (url) {
+                searchContext += `- ![${desc}](${url})\n`;
+              }
+            });
+            searchContext += `\n`;
+          }
+        }
+      } catch (err) {
+        console.error("Web search failed:", err);
+      }
+    }
 
     // Stream the AI response
     const messagesToSend = [...messages];
+    if (searchContext) {
+      const currentDateString = new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+      messagesToSend.push({
+        role: "system",
+        content: `Today's date is ${currentDateString}. Below are the web search results for the user query. Use these results to answer the query in detail. Cite sources when appropriate.\n\nWeb Search Results:\n${searchContext}`
+      });
+    }
     if (isVoice) {
       messagesToSend.push({
         role: "system",
@@ -219,6 +263,30 @@ export async function getSuggestions(req, res) {
 
     res.status(500).json({
       message: error.message,
+    });
+  }
+}
+export async function webSearch(req, res) {
+  try {
+    const { query } = req.body;
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json({
+        message: "Search query is required.",
+      });
+    }
+
+    const result = await searchWeb(query);
+
+    res.status(200).json({
+      message: "Web search successful.",
+      data: result,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: error.message || "Failed to search the web.",
     });
   }
 }

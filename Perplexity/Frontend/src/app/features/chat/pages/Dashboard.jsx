@@ -160,6 +160,7 @@ const Dashboard = () => {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isImageMode, setIsImageMode] = useState(false);
+  const [isWebSearchMode, setIsWebSearchMode] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [attachedImage, setAttachedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -206,6 +207,7 @@ const Dashboard = () => {
         isImage: false,
         attachedImageUrl: null,
         isVoice: true,
+        isWebSearch: isWebSearchMode,
       });
       if (res && res.content) {
         speakText(res.content);
@@ -564,6 +566,9 @@ const handleDownloadChat = () => {
     const wasImageMode = isImageMode;
     setIsImageMode(false);
 
+    const wasWebSearchMode = isWebSearchMode;
+    setIsWebSearchMode(false);
+
     const imageToSend = attachedImage;
     setAttachedImage(null);
     if (fileInputRef.current) {
@@ -575,6 +580,7 @@ const handleDownloadChat = () => {
       chatId: currentChatId,
       isImage: wasImageMode,
       attachedImageUrl: imageToSend,
+      isWebSearch: wasWebSearchMode,
     });
   };
  const fetchSuggestions = async () => {
@@ -1180,28 +1186,33 @@ const handleDownloadChat = () => {
                       <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                   </button>
-                  <button type="button" className="computer-btn">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                      <line x1="8" y1="21" x2="16" y2="21" />
-                      <line x1="12" y1="17" x2="12" y2="21" />
+                  <button 
+                    type="button" 
+                    className={`web-search-btn ${isWebSearchMode ? "active" : ""}`}
+                    onClick={() => {
+                      setIsWebSearchMode(!isWebSearchMode);
+                      if (!isWebSearchMode) {
+                        setIsImageMode(false);
+                      }
+                    }}
+                    title="Toggle Web Search Mode"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                     </svg>
-                    Computer
-                    <span className="plus-small">+</span>
+                    <span>Web Search</span>
                   </button>
                   <button 
                     type="button" 
                     className={`image-mode-btn ${isImageMode ? "active" : ""}`}
-                    onClick={() => setIsImageMode(!isImageMode)}
+                    onClick={() => {
+                      setIsImageMode(!isImageMode);
+                      if (!isImageMode) {
+                        setIsWebSearchMode(false);
+                      }
+                    }}
                     title="Toggle Image Generation Mode"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1448,8 +1459,31 @@ const handleDownloadChat = () => {
                 <div className="input-controls">
                   <button 
                     type="button" 
+                    className={`web-search-btn ${isWebSearchMode ? "active" : ""}`}
+                    onClick={() => {
+                      setIsWebSearchMode(!isWebSearchMode);
+                      if (!isWebSearchMode) {
+                        setIsImageMode(false);
+                      }
+                    }}
+                    title="Toggle Web Search Mode"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                    <span>Web Search</span>
+                  </button>
+                  <button 
+                    type="button" 
                     className={`image-mode-btn ${isImageMode ? "active" : ""}`}
-                    onClick={() => setIsImageMode(!isImageMode)}
+                    onClick={() => {
+                      setIsImageMode(!isImageMode);
+                      if (!isImageMode) {
+                        setIsWebSearchMode(false);
+                      }
+                    }}
                     title="Toggle Image Generation Mode"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

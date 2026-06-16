@@ -41,3 +41,10 @@ export const uploadImage = async (base64Image) => {
   const response = await api.post("/api/chats/upload", { image: base64Image });
   return response.data;
 };
+export const webSearch = async (query) => {
+  const response = await api.post("/api/chats/web-search", {
+    query,
+  });
+
+  return response.data;
+};

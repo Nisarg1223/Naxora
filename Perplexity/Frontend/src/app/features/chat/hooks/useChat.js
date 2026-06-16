@@ -47,7 +47,7 @@ export const useChat = () => {
   const dispatch = useDispatch();
   const chats = useSelector((state) => state.chat.chats);
 
-  async function handleSendMessage({ message, chatId, isImage, attachedImageUrl, isVoice }) {
+  async function handleSendMessage({ message, chatId, isImage, attachedImageUrl, isVoice, isWebSearch }) {
     try {
       // Clear any remaining queue from previous streams
       if (typingTimer) {
@@ -56,10 +56,10 @@ export const useChat = () => {
       }
       typingQueue = [];
       isTyping = false;
-
+ 
       let activeChatId = chatId;
       let tempId = null;
-
+ 
       // 1. If starting a new chat, generate a tempId, create the chat, and set it active optimistically
       if (!activeChatId) {
         tempId = `temp_${Date.now()}`;
@@ -72,7 +72,7 @@ export const useChat = () => {
         );
         dispatch(setCurrentChatId(tempId));
       }
-
+ 
       // 2. Optimistically add user's message immediately so it goes to the top
       dispatch(
         addNewMessage({
@@ -82,16 +82,16 @@ export const useChat = () => {
           attachedImageUrl: attachedImageUrl || null,
         })
       );
-
+ 
       dispatch(setLoading(true));
-
+ 
       // 3. Perform background server call to send message with streaming response (SSE)
       const response = await fetch("http://localhost:3000/api/chats/message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message, chat: chatId || null, isImage, attachedImageUrl, isVoice }),
+        body: JSON.stringify({ message, chat: chatId || null, isImage, attachedImageUrl, isVoice, isWebSearch }),
         credentials: "include", // Send session cookies for authMiddleware
       });
 

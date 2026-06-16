@@ -327,3 +327,42 @@ return uploadResponse.url;
     return pollinationsUrl;
   }
 }
+
+export async function searchWeb(query) {
+  try {
+    const { data } = await axios.post(
+      "https://api.tavily.com/search",
+      {
+        api_key: process.env.TAVILY_API_KEY,
+        query,
+        search_depth: "basic",
+        max_results: 10,
+        include_answer: true,
+        include_images: true,
+        include_raw_content: false,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return {
+      answer: data.answer,
+      results: data.results.map((result) => ({
+        title: result.title,
+        url: result.url,
+        content: result.content,
+      })),
+      images: data.images || [],
+    };
+  } catch (error) {
+    console.error(
+      "Tavily Search Error:",
+      error.response?.data || error.message
+    );
+
+    throw new Error("Failed to search the web.");
+  }
+}
