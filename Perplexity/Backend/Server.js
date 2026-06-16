@@ -11,6 +11,7 @@ const httpServer = http.createServer(app);
 initSocket(httpServer);
 
 connecttoDB();
-httpServer.listen(3000, function () {
-  console.log("server is running on port 3000");
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, function () {
+  console.log(`server is running on port ${PORT}`);
 });

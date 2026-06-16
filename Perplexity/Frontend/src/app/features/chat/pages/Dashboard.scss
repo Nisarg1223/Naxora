@@ -735,7 +735,6 @@ margin-top: 16px;
     }
   }
 
-  /* ✅ BOT MESSAGE (LEFT SIDE) */
   .bot-message {
     justify-content: flex-start;
     flex-direction: column;
@@ -745,14 +744,14 @@ margin-top: 16px;
       font-size: 16px;
       line-height: 1.6;
       margin-bottom: 8px;
-      max-width: 80%;
+      max-width: 100%;
     }
 
     .message-actions {
       display: flex;
       justify-content: space-between;
       width: 100%;
-      max-width: 80%;
+      max-width: 100%;
 
       .left-actions,
       .right-actions {
@@ -991,7 +990,7 @@ margin-top: 16px;
 
   .message-actions {
     margin-top: 6px;
-    max-width: 75%;
+    max-width: 100%;
     display: flex;
     justify-content: space-between;
   }
@@ -1017,14 +1016,24 @@ margin-top: 16px;
     max-width: 85%;
   }
 
+  .bot-message {
+    align-items: flex-start;
+  }
+
   .bot-message .content {
     max-width: 100%;
+    text-align: left;
+
+    pre, code, .custom-code-block {
+      text-align: left;
+    }
   }
 
   .bot-message .message-actions {
     max-width: 90%;
     flex-wrap: wrap;
     gap: 6px;
+    justify-content: flex-start;
   }
 
   /* top bar fix */

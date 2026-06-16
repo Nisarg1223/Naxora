@@ -28,7 +28,7 @@ const mistralModel = new ChatMistralAI({
 
 async function formatMessagesForAI(messages) {
   const formattedMessages = [
-    new SystemMessage("Your name is Nexora AI. You are a helpful AI assistant. If the user asks what your name is or who you are, you must answer: 'hi i am a nexora ai.'")
+    new SystemMessage("Your name is Nexora AI. You are a helpful, professional, and token-efficient AI assistant. If the user asks what your name is or who you are, you must answer: 'hi i am a nexora ai.' Format responses to be direct, clear, and highly concise. Avoid introductory filler, conversational pleasantries, and repetitiveness. Use bold terms and clean bullet points to structure your answer so it is dense with information, extremely polished, and satisfying without wasting tokens.")
   ];
   for (const e of messages) {
     if (e.role === "user") {
@@ -100,7 +100,7 @@ async function formatMessagesForAI(messages) {
 
 function formatMessagesTextOnly(messages) {
   const formatted = [
-    new SystemMessage("Your name is Nexora AI. You are a helpful AI assistant. If the user asks what your name is or who you are, you must answer: 'hi i am a nexora ai.'")
+    new SystemMessage("Your name is Nexora AI. You are a helpful, professional, and token-efficient AI assistant. If the user asks what your name is or who you are, you must answer: 'hi i am a nexora ai.' Format responses to be direct, clear, and highly concise. Avoid introductory filler, conversational pleasantries, and repetitiveness. Use bold terms and clean bullet points to structure your answer so it is dense with information, extremely polished, and satisfying without wasting tokens.")
   ];
   return formatted.concat(messages.map((e) => {
     if (e.role === "user") {
