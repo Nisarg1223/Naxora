@@ -8,7 +8,7 @@ import {
 } from "../services/ai.service.js";
 import ChatModel from "../models/chat.model.js";
 import MessageModel from "../models/message.model.js";
-
+import SharedChatModel from "../models/sharedChat.model.js";
 export async function sendMessage(req, res) {
   try {
     const { message, chat: chatId, isImage, attachedImageUrl, isVoice, isWebSearch } = req.body;
@@ -287,6 +287,57 @@ export async function webSearch(req, res) {
 
     res.status(500).json({
       message: error.message || "Failed to search the web.",
+    });
+  }
+}
+export async function shareChat(req, res) {
+  try {
+    const { chatId } = req.params;
+
+    const chat = await ChatModel.findOne({
+      _id: chatId,
+      user: req.user.id,
+    });
+
+    if (!chat) {
+      return res.status(404).json({
+        message: "Chat not found",
+      });
+    }
+
+    const messages = await MessageModel.find({
+      chat: chatId,
+    }).sort({
+      createdAt: 1,
+    });
+
+    const conversation = messages.map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+      isImage: msg.isImage || false,
+      imageUrl: msg.imageUrl || "",
+      prompt: msg.prompt || "",
+      attachedImageUrl: msg.attachedImageUrl || "",
+      createdAt: msg.createdAt,
+    }));
+
+    const sharedChat = await SharedChatModel.create({
+      originalChat: chat._id,
+      createdBy: req.user.id,
+      title: chat.title,
+      conversation,
+    });
+
+    const url = `http://localhost:5173/share/${sharedChat._id}`;
+
+    res.status(200).json({
+      message: "Chat shared successfully",
+      url,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
     });
   }
 }
