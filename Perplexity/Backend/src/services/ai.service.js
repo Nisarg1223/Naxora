@@ -2,7 +2,7 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatGroq } from "@langchain/groq";
 import { ChatMistralAI } from "@langchain/mistralai";
 import axios from "axios";
-import imagekit from "../config/imagekit.js";
+import getImageKit from "../config/imagekit.js";
 import fs from "fs";
 import path from "path";
 import {
@@ -11,20 +11,40 @@ import {
   AIMessage,
 } from "langchain";
 
-const geminiModel = new ChatGoogleGenerativeAI({
-  model: "gemini-2.5-flash",
-  apiKey: process.env.GEMINI_API_KEY,
-});
+// Lazy-initialize AI models so dotenv env vars are available at call time
+let _geminiModel = null;
+let _groqModel = null;
+let _mistralModel = null;
 
-const groqModel = new ChatGroq({
-  apiKey: process.env.GROQ_API_KEY,
-  model: "llama-3.3-70b-versatile",
-});
+function getGeminiModel() {
+  if (!_geminiModel) {
+    _geminiModel = new ChatGoogleGenerativeAI({
+      model: "gemini-2.5-flash",
+      apiKey: process.env.GEMINI_API_KEY,
+    });
+  }
+  return _geminiModel;
+}
 
-const mistralModel = new ChatMistralAI({
-  model: "mistral-large-latest",
-  apiKey: process.env.MISTRAL_API_KEY,
-});
+function getGroqModel() {
+  if (!_groqModel) {
+    _groqModel = new ChatGroq({
+      apiKey: process.env.GROQ_API_KEY,
+      model: "llama-3.3-70b-versatile",
+    });
+  }
+  return _groqModel;
+}
+
+function getMistralModel() {
+  if (!_mistralModel) {
+    _mistralModel = new ChatMistralAI({
+      model: "mistral-large-latest",
+      apiKey: process.env.MISTRAL_API_KEY,
+    });
+  }
+  return _mistralModel;
+}
 
 async function formatMessagesForAI(messages) {
   const formattedMessages = [
@@ -124,20 +144,20 @@ export async function generateRresponse(messages) {
 
   try {
     // MAIN AI
-    const response = await geminiModel.invoke(formattedMessages);
+    const response = await getGeminiModel().invoke(formattedMessages);
     return response.text;
   } catch (error) {
     console.log("Gemini failed. Switching to Groq...");
     const textOnlyMessages = formatMessagesTextOnly(messages);
     // FALLBACK AI
-    const fallbackResponse = await groqModel.invoke(textOnlyMessages);
+    const fallbackResponse = await getGroqModel().invoke(textOnlyMessages);
     return fallbackResponse.content;
   }
 }
 
 export async function generateChatTitle(message) {
   try {
-    const response = await mistralModel.invoke([
+    const response = await getMistralModel().invoke([
       new SystemMessage(
         "Generate a short 2-3 word title for this chat."
       ),
@@ -147,7 +167,7 @@ export async function generateChatTitle(message) {
     return response.content;
   } catch (error) {
     console.log("Mistral failed for title. Switching to Groq...");
-    const fallbackResponse = await groqModel.invoke([
+    const fallbackResponse = await getGroqModel().invoke([
       new SystemMessage(
         "Generate a short 2-3 word title for this chat."
       ),
@@ -209,7 +229,7 @@ export async function streamResponse(messages, onChunk) {
   }
 
   try {
-    const stream = await geminiModel.stream(formattedMessages);
+    const stream = await getGeminiModel().stream(formattedMessages);
     for await (const chunk of stream) {
       if (chunk.content) {
         onChunk(chunk.content);
@@ -218,7 +238,7 @@ export async function streamResponse(messages, onChunk) {
   } catch (error) {
     console.log("Gemini stream failed. Switching to Groq stream...");
     const textOnlyMessages = formatMessagesTextOnly(messages);
-    const stream = await groqModel.stream(textOnlyMessages);
+    const stream = await getGroqModel().stream(textOnlyMessages);
     for await (const chunk of stream) {
       if (chunk.content) {
         onChunk(chunk.content);
@@ -265,7 +285,7 @@ export async function generateImage(prompt) {
           responseType: "arraybuffer"
         }
       );
-     const uploadResponse = await imagekit.upload({
+     const uploadResponse = await getImageKit().upload({
   file: Buffer.from(response.data),
   fileName: filename,
   folder: "/generated-images",
@@ -308,7 +328,7 @@ return uploadResponse.url;
 );
 
 const uploadResponse =
- await imagekit.upload({
+ await getImageKit().upload({
    file: buffer,
    fileName: filename,
    folder: "/generated-images",

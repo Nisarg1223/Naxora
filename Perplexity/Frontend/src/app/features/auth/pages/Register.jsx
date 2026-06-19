@@ -10,7 +10,6 @@ const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [regSuccess, setRegSuccess] = useState(false);
 
   const loading = useSelector(state => state.auth.loading);
   const error = useSelector(state => state.auth.error);
@@ -25,13 +24,10 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     dispatch(setError(null));
-    
+
     const success = await handleRegister({ email, username, password });
     if (success) {
-      setRegSuccess(true);
-      setTimeout(() => {
-        navigate('/login');
-      }, 2500);
+      navigate('/');
     }
   };
 
@@ -61,18 +57,7 @@ const Register = () => {
           <h1 className="auth-title">Create account</h1>
           <p className="auth-subtitle">Join and query the future</p>
 
-          {regSuccess && (
-            <motion.div 
-              className="auth-success-banner"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <span className="success-icon">✓</span>
-              <span className="success-text">Registration successful! Redirecting to sign in...</span>
-            </motion.div>
-          )}
-
-          {error && !regSuccess && (
+          {error && (
             <motion.div 
               className="auth-error-banner"
               initial={{ opacity: 0, y: -10 }}
@@ -100,7 +85,7 @@ const Register = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required 
-                  disabled={loading || regSuccess}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -117,11 +102,11 @@ const Register = () => {
                 <input 
                   type="email" 
                   id="email" 
-                  placeholder="Your Email" 
+                  placeholder="your@email.com" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required 
-                  disabled={loading || regSuccess}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -142,12 +127,12 @@ const Register = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required 
-                  disabled={loading || regSuccess}
+                  disabled={loading}
                 />
               </div>
             </div>
 
-            <button type="submit" className="auth-submit-btn" disabled={loading || regSuccess}>
+            <button type="submit" className="auth-submit-btn" disabled={loading}>
               {loading ? (
                 <span className="btn-spinner"></span>
               ) : (
