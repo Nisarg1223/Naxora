@@ -4,7 +4,7 @@ import {
   streamResponse,
   getTrendingNews,
   generateImage,
-   searchWeb,
+  searchWeb,
 } from "../services/ai.service.js";
 import ChatModel from "../models/chat.model.js";
 import MessageModel from "../models/message.model.js";
@@ -174,28 +174,28 @@ export async function sendMessage(req, res) {
   }
 }
 
-export async function getChats(req,res){
+export async function getChats(req, res) {
   const user = req.user;
 
-  const chats = await ChatModel.find({user:user.id}).sort({ updatedAt: -1 });
+  const chats = await ChatModel.find({ user: user.id }).sort({ updatedAt: -1 });
 
   res.status(200).json({
-    message:"chat recieved sucessfully",
+    message: "chat recieved sucessfully",
     chats
   });
 }
 
-export async function getMessages(req,res){
-  const {chatId} = req.params;
+export async function getMessages(req, res) {
+  const { chatId } = req.params;
 
   const chat = await ChatModel.findOne({
-    _id:chatId,
-    user:req.user.id
+    _id: chatId,
+    user: req.user.id
   })
 
-  if(!chat){
+  if (!chat) {
     return res.status(404).json({
-      message:"chat not found"
+      message: "chat not found"
     })
 
   }
@@ -205,12 +205,12 @@ export async function getMessages(req,res){
   })
 
   res.status(200).json({
-    message:"messages recives successfully",
+    message: "messages recives successfully",
     allMessages
   })
 }
-export async function getGeneratedImages(req,res){
-  try{
+export async function getGeneratedImages(req, res) {
+  try {
     const chats = await ChatModel.find({ user: req.user.id });
     const chatIds = chats.map(c => c._id);
 
@@ -222,34 +222,34 @@ export async function getGeneratedImages(req,res){
     res.status(200).json({
       images
     });
-  }catch(error){
+  } catch (error) {
     res.status(500).json({
-      message:error.message
+      message: error.message
     });
   }
 }
-export async function deleteChat(req,res){
-  
-  const {chatId} = req.params;
+export async function deleteChat(req, res) {
 
-   const chat = await ChatModel.findOneAndDelete({
-    _id:chatId,
-    user:req.user.id
-   })
+  const { chatId } = req.params;
 
-  await MessageModel.deleteMany({
-    chat:chatId
+  const chat = await ChatModel.findOneAndDelete({
+    _id: chatId,
+    user: req.user.id
   })
 
-   if(!chat){
-    return res.status(404).json({
-      message:"chat not found"
-    })
-   }
+  await MessageModel.deleteMany({
+    chat: chatId
+  })
 
-   res.status(200).json({
-    message:"chat deleted successfully"
-   })
+  if (!chat) {
+    return res.status(404).json({
+      message: "chat not found"
+    })
+  }
+
+  res.status(200).json({
+    message: "chat deleted successfully"
+  })
 }
 export async function getSuggestions(req, res) {
   try {

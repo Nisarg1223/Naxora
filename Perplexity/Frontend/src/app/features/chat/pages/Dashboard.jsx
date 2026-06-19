@@ -153,6 +153,21 @@ const InteractiveImage = ({ src, alt, onZoom }) => {
   );
 };
 
+// Extracts all markdown images from content, returns { cleanText, images }
+// so web-search images are never mixed inline with prose text
+function extractWebImages(content) {
+  if (!content) return { cleanText: content, images: [] };
+  const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const images = [];
+  let match;
+  while ((match = imageRegex.exec(content)) !== null) {
+    images.push({ alt: match[1], src: match[2] });
+  }
+  // Remove all image markdown from the prose text
+  const cleanText = content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  return { cleanText, images };
+}
+
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [inputText, setInputText] = useState("");
@@ -162,6 +177,7 @@ const Dashboard = () => {
   const [isImageMode, setIsImageMode] = useState(false);
   const [isWebSearchMode, setIsWebSearchMode] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [carousel, setCarousel] = useState(null); // { images:[{src,alt}], index:number }
   const [attachedImage, setAttachedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = React.useRef(null);
@@ -252,7 +268,23 @@ const Dashboard = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Keyboard shortcut listener (Ctrl+K to open search, Esc to close)
+  // Keyboard navigation for carousel
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!carousel) return;
+      if (e.key === 'ArrowRight') {
+        setCarousel(c => c.index < c.images.length - 1 ? { ...c, index: c.index + 1 } : c);
+      } else if (e.key === 'ArrowLeft') {
+        setCarousel(c => c.index > 0 ? { ...c, index: c.index - 1 } : c);
+      } else if (e.key === 'Escape') {
+        setCarousel(null);
+        setSelectedImage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [carousel]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -511,7 +543,28 @@ const handleDownloadChat = () => {
       return <pre>{children}</pre>;
     },
     p({ children, ...props }) {
-      const hasBlock = React.Children.toArray(children).some(
+      const childArray = React.Children.toArray(children);
+
+      // Detect paragraphs containing ONLY images (web search image groups)
+      const allImages = childArray.length > 0 && childArray.every(
+        (child) =>
+          React.isValidElement(child) &&
+          (child.type === "img" ||
+            child.props?.src !== undefined ||
+            typeof child.type === "function")
+      );
+
+      // Multiple images → horizontal scroll row
+      if (allImages && childArray.length > 1) {
+        return (
+          <div className="web-search-images-row">
+            {children}
+          </div>
+        );
+      }
+
+      // Single image or mixed block content → plain div
+      const hasBlock = childArray.some(
         (child) =>
           React.isValidElement(child) &&
           (child.type === "img" ||
@@ -534,7 +587,8 @@ const handleDownloadChat = () => {
         />
       );
     }
-  }), [setSelectedImage]);
+  }), [setSelectedImage, setCarousel]);
+
 
   useEffect(() => {
     handleGetChat();
@@ -1367,9 +1421,50 @@ const handleDownloadChat = () => {
                           onZoom={(imgData) => setSelectedImage(imgData)}
                         />
                       ) : (
-                        <ReactMarkdown components={markdownComponents}>
-                          {msg.content}
-                        </ReactMarkdown>
+                        (() => {
+                          const { cleanText, images } = extractWebImages(msg.content);
+                          return (
+                            <>
+                              {cleanText && (
+                                <ReactMarkdown components={markdownComponents}>
+                                  {cleanText}
+                                </ReactMarkdown>
+                              )}
+                              {images.length > 0 && (
+                                <div className="web-search-images-row">
+                                  {images.map((img, i) => (
+                                    <div
+                                      key={i}
+                                      className="premium-image-wrapper"
+                                      onClick={() => setCarousel({ images, index: i })}
+                                      style={{ cursor: 'pointer' }}
+                                    >
+                                      <div className="premium-image-card">
+                                        <img
+                                          src={img.src}
+                                          alt={img.alt || 'Web Image'}
+                                          loading="lazy"
+                                          onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
+                                        <div className="premium-image-overlay">
+                                          <div className="overlay-actions">
+                                            <button type="button" className="img-action-btn zoom-btn" title="View">
+                                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <circle cx="11" cy="11" r="8"></circle>
+                                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                              </svg>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      {img.alt && <p className="premium-image-caption">🌐 {img.alt}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()
                       )}
                     </div>
                   </div>
@@ -1558,7 +1653,87 @@ const handleDownloadChat = () => {
         )}
       </main>
 
-      {/* Lightbox Modal */}
+      {/* Carousel Lightbox — web search images */}
+      {carousel && (
+        <div className="carousel-lightbox" onClick={() => setCarousel(null)}>
+          {/* Close */}
+          <button type="button" className="carousel-close" onClick={() => setCarousel(null)}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          {/* Counter */}
+          <div className="carousel-counter">{carousel.index + 1} / {carousel.images.length}</div>
+
+          {/* Slides */}
+          <div className="carousel-track" onClick={(e) => e.stopPropagation()}>
+            {/* Prev image (partially visible, dimmed) */}
+            <div
+              className={`carousel-slide carousel-slide--prev ${carousel.index === 0 ? 'carousel-slide--hidden' : ''}`}
+              onClick={() => carousel.index > 0 && setCarousel(c => ({ ...c, index: c.index - 1 }))}
+            >
+              {carousel.index > 0 && (
+                <img src={carousel.images[carousel.index - 1].src} alt="prev" />
+              )}
+            </div>
+
+            {/* Current image (center, full size) */}
+            <div className="carousel-slide carousel-slide--active">
+              <img
+                src={carousel.images[carousel.index].src}
+                alt={carousel.images[carousel.index].alt || 'Web Image'}
+              />
+            </div>
+
+            {/* Next image (partially visible, dimmed) */}
+            <div
+              className={`carousel-slide carousel-slide--next ${carousel.index === carousel.images.length - 1 ? 'carousel-slide--hidden' : ''}`}
+              onClick={() => carousel.index < carousel.images.length - 1 && setCarousel(c => ({ ...c, index: c.index + 1 }))}
+            >
+              {carousel.index < carousel.images.length - 1 && (
+                <img src={carousel.images[carousel.index + 1].src} alt="next" />
+              )}
+            </div>
+          </div>
+
+          {/* Prev button */}
+          {carousel.index > 0 && (
+            <button
+              type="button"
+              className="carousel-nav carousel-nav--prev"
+              onClick={(e) => { e.stopPropagation(); setCarousel(c => ({ ...c, index: c.index - 1 })); }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+          )}
+
+          {/* Next button */}
+          {carousel.index < carousel.images.length - 1 && (
+            <button
+              type="button"
+              className="carousel-nav carousel-nav--next"
+              onClick={(e) => { e.stopPropagation(); setCarousel(c => ({ ...c, index: c.index + 1 })); }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          )}
+
+          {/* Caption */}
+          {carousel.images[carousel.index].alt && (
+            <div className="carousel-caption">
+              🌐 {carousel.images[carousel.index].alt}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Simple Lightbox — single AI-generated images */}
       {selectedImage && (
         <div className="image-lightbox-modal" onClick={() => setSelectedImage(null)}>
           <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
@@ -1570,12 +1745,12 @@ const handleDownloadChat = () => {
               </svg>
             </button>
             <div className="lightbox-caption">
-              <span>{selectedImage.alt || "Generated Image"}</span>
-              <button 
+              <span>{selectedImage.alt || 'Generated Image'}</span>
+              <button
                 type="button"
                 className="lightbox-download-btn"
                 onClick={() => {
-                  const link = document.createElement("a");
+                  const link = document.createElement('a');
                   link.href = selectedImage.src;
                   link.download = `generated_image_${Date.now()}.jpg`;
                   document.body.appendChild(link);
