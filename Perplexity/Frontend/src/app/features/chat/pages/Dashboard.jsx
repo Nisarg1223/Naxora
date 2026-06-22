@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "../hooks/useChat";
 import { useVoice } from "../hooks/useVoice";
+import { useShareChat } from "../hooks/useShareChat";
 import VoiceOverlay from "../components/VoiceOverlay";
 import { setCurrentChatId,  setSuggestions, } from "../chat.slice";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -211,6 +212,11 @@ const Dashboard = () => {
 
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
 
+  const { shareChat, loading: isSharing, error: shareError, success: shareSuccess, sharedUrl } = useShareChat();
+  const [toastMessage, setToastMessage] = useState(null);
+  const [toastType, setToastType] = useState(null);
+  const [sharedUrlDisplay, setSharedUrlDisplay] = useState(null);
+
   const handleFinalVoiceTranscript = async (text) => {
     if (!text || isLoading) return;
     setHasSearched(true);
@@ -258,6 +264,31 @@ const Dashboard = () => {
       setInputText(transcript);
     }
   }, [transcript, voiceState]);
+
+  useEffect(() => {
+    if (shareSuccess && sharedUrl) {
+      setSharedUrlDisplay(sharedUrl);
+      setToastMessage("Share link copied successfully.");
+      setToastType("success");
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+        setToastType(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [shareSuccess, sharedUrl]);
+
+  useEffect(() => {
+    if (shareError) {
+      setToastMessage(shareError);
+      setToastType("error");
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+        setToastType(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [shareError]);
 
   // Resize listener
   useEffect(() => {
@@ -507,6 +538,7 @@ const handleDownloadChat = () => {
 
   useEffect(() => {
     setActiveTab("answer");
+    setSharedUrlDisplay(null);
   }, [currentChatId]);
 
   useEffect(() => {
@@ -1163,7 +1195,11 @@ const handleDownloadChat = () => {
                   <circle cx="5" cy="12" r="1" />
                 </svg>
               </button>
-              <button className="action-btn share-btn">
+              <button
+                className="action-btn share-btn"
+                disabled={isSharing || !currentChatId}
+                onClick={() => shareChat(currentChatId)}
+              >
                 <svg
                   width="16"
                   height="16"
@@ -1180,7 +1216,7 @@ const handleDownloadChat = () => {
                   <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
                   <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                 </svg>
-                Share
+                {isSharing ? "Sharing..." : "Share"}
               </button>
               <button className="action-btn download-btn"
                onClick={handleDownloadChat}
@@ -1469,6 +1505,40 @@ const handleDownloadChat = () => {
                     </div>
                   </div>
                 ))}
+
+                {/* Share link notification — inline in chat */}
+                {sharedUrlDisplay && (
+                  <div className="share-link-notification">
+                    <div className="share-link-notification__body">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="18" cy="5" r="3" />
+                        <circle cx="6" cy="12" r="3" />
+                        <circle cx="18" cy="19" r="3" />
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                      </svg>
+                      <span className="share-link-notification__label">Your shared link is,</span>
+                    </div>
+                    <a
+                      href={sharedUrlDisplay}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="share-link-notification__url"
+                    >
+                      {sharedUrlDisplay}
+                    </a>
+                    <button
+                      className="share-link-notification__close"
+                      onClick={() => setSharedUrlDisplay(null)}
+                      title="Dismiss"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
 
                 {isLoading && (
                   <div className="message bot-message">
@@ -1907,6 +1977,24 @@ const handleDownloadChat = () => {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Share Toast */}
+      {toastMessage && (
+        <div className={`share-toast share-toast--${toastType}`}>
+          {toastType === "success" ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          )}
+          <span>{toastMessage}</span>
         </div>
       )}
 

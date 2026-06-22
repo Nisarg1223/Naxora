@@ -48,3 +48,8 @@ export const webSearch = async (query) => {
 
   return response.data;
 };
+
+export const shareChat = async (chatId) => {
+  const response = await api.post(`/api/chats/share/${chatId}`);
+  return response.data;
+};

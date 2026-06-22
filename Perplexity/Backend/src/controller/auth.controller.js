@@ -1,5 +1,7 @@
 import userModel from "../models/user.model.js";
 import jwt from "jsonwebtoken";
+import { Sendemail } from "../services/mail.service.js";
+import { getWelcomeEmailContent } from "../services/welcomeEmail.template.js";
 
 export async function RegisterController(req, res) {
   const { username, email, password } = req.body;
@@ -30,6 +32,12 @@ export async function RegisterController(req, res) {
   );
 
   res.cookie("token", token);
+
+  // Send welcome email (fire-and-forget — doesn't block response)
+  const { subject, html, text } = getWelcomeEmailContent(User.username);
+  Sendemail(User.email, subject, text, html).catch((err) =>
+    console.error("[Welcome Email] Failed to send:", err)
+  );
 
   res.status(201).json({
     message: "User registered successfully",

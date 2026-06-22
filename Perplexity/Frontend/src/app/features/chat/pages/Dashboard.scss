@@ -508,8 +508,13 @@ margin-top: 16px;
             border: 1px solid var(--border-light);
             border-radius: 6px;
 
-            &:hover {
+            &:hover:not(:disabled) {
               background-color: var(--bg-hover);
+            }
+
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
             }
           }
 
@@ -1338,9 +1343,8 @@ margin-top: 16px;
   animation: shimmer 1.2s infinite;
 }
 
-/* ==========================================================================
-   Text to Image Mode and Premium Rendering Styles
-   ========================================================================== */
+
+
 
 .image-mode-btn {
   display: flex;
@@ -1629,9 +1633,6 @@ margin-top: 16px;
   padding-left: 4px;
 }
 
-/* ============================================================
-   Carousel Lightbox — ChatGPT-style prev/center/next viewer
-   ============================================================ */
 
 .carousel-lightbox {
   position: fixed;
@@ -1643,7 +1644,7 @@ margin-top: 16px;
   justify-content: center;
   animation: fadeIn 0.2s ease;
 
-  /* Close button — top left */
+
   .carousel-close {
     position: absolute;
     top: 20px;
@@ -1668,7 +1669,7 @@ margin-top: 16px;
     }
   }
 
-  /* Counter — top center */
+ 
   .carousel-counter {
     position: absolute;
     top: 24px;
@@ -1681,7 +1682,7 @@ margin-top: 16px;
     z-index: 10;
   }
 
-  /* Track holds the three slides side by side */
+
   .carousel-track {
     display: flex;
     align-items: center;
@@ -1692,7 +1693,7 @@ margin-top: 16px;
     padding: 80px 60px 100px;
   }
 
-  /* Base slide */
+
   .carousel-slide {
     border-radius: 12px;
     overflow: hidden;
@@ -1708,14 +1709,14 @@ margin-top: 16px;
     }
   }
 
-  /* Hidden (no prev/next on boundary) */
+
   .carousel-slide--hidden {
     opacity: 0;
     pointer-events: none;
     width: 80px !important;
   }
 
-  /* Previous — left side, smaller, dimmed, clickable */
+  
   .carousel-slide--prev {
     width: clamp(100px, 18vw, 220px);
     height: clamp(160px, 55vh, 480px);
@@ -1749,7 +1750,7 @@ margin-top: 16px;
     }
   }
 
-  /* Next — right side, smaller, dimmed, clickable */
+
   .carousel-slide--next {
     width: clamp(100px, 18vw, 220px);
     height: clamp(160px, 55vh, 480px);
@@ -1768,7 +1769,7 @@ margin-top: 16px;
     }
   }
 
-  /* Navigation buttons */
+ 
   .carousel-nav {
     position: absolute;
     top: 50%;
@@ -1795,7 +1796,7 @@ margin-top: 16px;
     &--next { right: 20px; }
   }
 
-  /* Caption — bottom left */
+
   .carousel-caption {
     position: absolute;
     bottom: 28px;
@@ -2250,9 +2251,7 @@ margin-top: 16px;
   }
 }
 
-/* ==========================================
-   DESKTOP SEARCH OVERLAY MODAL
-   ========================================== */
+
 .search-modal-overlay {
   position: fixed;
   inset: 0;
@@ -2408,9 +2407,7 @@ margin-top: 16px;
   }
 }
 
-/* ==========================================
-   MOBILE SEARCH SIDEBAR VIEW
-   ========================================== */
+
 .mobile-search-sidebar-view {
   display: flex;
   flex-direction: column;
@@ -2591,9 +2588,6 @@ margin-top: 16px;
   }
 }
 
-/* ==========================================================================
-   Voice Mode Styles
-   ========================================================================== */
 
 .voice-overlay-backdrop {
   position: fixed;
@@ -2933,6 +2927,141 @@ margin-top: 16px;
 
     &::-webkit-slider-thumb:hover {
       transform: scale(1.2);
+    }
+  }
+}
+
+// Share chat toast notification
+@keyframes share-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.share-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  animation: share-toast-in 0.25s ease forwards;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &--success {
+    background-color: #166534;
+    border: 1px solid #15803d;
+    color: #bbf7d0;
+
+    svg {
+      color: #4ade80;
+    }
+  }
+
+  &--error {
+    background-color: #7f1d1d;
+    border: 1px solid #991b1b;
+    color: #fecaca;
+
+    svg {
+      color: #f87171;
+    }
+  }
+}
+
+// Share link — inline notification inside the chat message stream
+@keyframes share-notif-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.share-link-notification {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  background-color: rgba(14, 165, 233, 0.06);
+  border: 1px solid rgba(14, 165, 233, 0.15);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: share-notif-in 0.2s ease forwards;
+  position: relative;
+
+  &__body {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    svg {
+      flex-shrink: 0;
+      color: #38bdf8;
+    }
+  }
+
+  &__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #8c8c8c;
+  }
+
+  &__url {
+    font-size: 13px;
+    font-weight: 500;
+    color: #38bdf8;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(56, 189, 248, 0.35);
+    word-break: break-all;
+    line-height: 1.5;
+    transition: color 0.15s;
+
+    &:hover {
+      color: #7dd3fc;
+    }
+  }
+
+  &__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.15s, background-color 0.15s;
+
+    &:hover {
+      color: #e8e8e6;
+      background-color: rgba(255, 255, 255, 0.08);
     }
   }
 }

@@ -3,6 +3,7 @@ import Login from './features/auth/pages/Login';
 import Register from './features/auth/pages/Register';
 import Protected from './features/auth/components/Protected';
 import Dashboard from './features/chat/pages/Dashboard';
+import SharedChat from './features/chat/pages/SharedChat';
 import { Navigate } from 'react-router';
 export const router = createBrowserRouter([
     {
@@ -22,5 +23,9 @@ export const router = createBrowserRouter([
     {
         path:"/dashboard",
         element:<Navigate to="/" replace/>
+    },
+    {
+        path:"/share/:sharedChatId",
+        element:<SharedChat/>
     }
 ])

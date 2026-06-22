@@ -4,6 +4,7 @@ import authRouter from './routes/auth.route.js';
 import morgan from 'morgan'
 import cors from 'cors'
 import chatRouter from './routes/chat.routes.js';
+import sharedChatRouter from './routes/sharedChat.route.js';
 const app = express();
 
 app.use(cors({
@@ -17,5 +18,6 @@ app.use(cookieParser());
 app.use(morgan("dev"));
 app.use("/api/auth",authRouter);
 app.use("/api/chats",chatRouter);
+app.use("/api/share", sharedChatRouter);
 app.use("/public", express.static("public"));
 export default app;
