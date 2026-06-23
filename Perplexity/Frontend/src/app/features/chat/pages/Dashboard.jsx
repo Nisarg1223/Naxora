@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "../hooks/useChat";
@@ -177,6 +177,10 @@ const Dashboard = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isImageMode, setIsImageMode] = useState(false);
   const [isWebSearchMode, setIsWebSearchMode] = useState(false);
+  // State for delayed informational message when response takes long
+  const [delayedInfoMessage, setDelayedInfoMessage] = useState(null);
+  const delayTimerRef = useRef(null);
+  const lastRequestModeRef = useRef('text');
   const [selectedImage, setSelectedImage] = useState(null);
   const [carousel, setCarousel] = useState(null); // { images:[{src,alt}], index:number }
   const [attachedImage, setAttachedImage] = useState(null);
@@ -638,6 +642,18 @@ const handleDownloadChat = () => {
   useEffect(() => {
     initializeSocketConnection?.();
   }, []);
+
+  // Clear delayed message and timer when loading finishes
+  useEffect(() => {
+    if (!isLoading) {
+      setDelayedInfoMessage(null);
+      if (delayTimerRef.current) {
+        clearTimeout(delayTimerRef.current);
+        delayTimerRef.current = null;
+      }
+    }
+  }, [isLoading]);
+
   const handleSend = (e) => {
     if (e) e.preventDefault();
     if (isLoading) return;
@@ -661,6 +677,12 @@ const handleDownloadChat = () => {
       fileInputRef.current.value = "";
     }
 
+    // Store the mode of the request for delayed message
+    let mode = 'text';
+    if (wasWebSearchMode) mode = 'websearch';
+    else if (wasImageMode) mode = 'image';
+    lastRequestModeRef.current = mode;
+
     handleSendMessage({
       message: trimmedMessage || (wasImageMode ? "Generate image" : "Analyze this image"),
       chatId: currentChatId,
@@ -668,6 +690,19 @@ const handleDownloadChat = () => {
       attachedImageUrl: imageToSend,
       isWebSearch: wasWebSearchMode,
     });
+
+    // Set up delayed info message after 7 seconds
+    if (delayTimerRef.current) clearTimeout(delayTimerRef.current);
+    delayTimerRef.current = setTimeout(() => {
+      if (isLoading) {
+        const mode = lastRequestModeRef.current;
+        let msg = '';
+        if (mode === 'image') msg = 'Lots of people are generating the image...';
+        else if (mode === 'websearch') msg = 'Lots of people are web searching...';
+        else msg = 'Lots of people are typing...';
+        setDelayedInfoMessage(msg);
+      }
+    }, 7000);
   };
  const fetchSuggestions = async () => {
   try {
@@ -690,6 +725,11 @@ const handleDownloadChat = () => {
 };
   return (
     <div className="dashboard">
+        {delayedInfoMessage && (
+          <div className="delayed-info">
+            {delayedInfoMessage}
+          </div>
+        )}
       <input 
         type="file" 
         accept="image/*" 
