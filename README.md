@@ -58,3 +58,63 @@ Nexora AI is built to provide more than just conversations. It combines AI-power
 * Speech Recognition API
 * Text-to-Speech API
 * many more...
+
+# 📸 Screenshots
+
+## 💬 Intelligent AI Chat
+![AI Chat](./Nexora/Frontend/src/assets/AI-Chat.png)
+
+---
+
+## 🎙️ AI Voice Assistant
+![Voice Assistant](./Nexora/Frontend/src/assets/Voice-Assistant.png)
+
+---
+
+## 🌐 Real-Time Web Search
+![Web Search](./Nexora/Frontend/src/assets/Web-Search.png)
+
+---
+
+## 📌 Pin Important Conversations
+![Pinned Chats](./Nexora/Frontend/src/assets/Pinned-Chats.png)
+
+---
+
+## 🔗 Share Chats with a Unique Link
+![Share Chats](./Nexora/Frontend/src/assets/Share-Chats.png)
+
+---
+
+## 📥 Download Chat History
+![Download Chats](./Nexora/Frontend/src/assets/Download-Chats.png)
+
+---
+
+## 🕒 Conversation History
+![History](./Nexora/Frontend/src/assets/History.png)
+
+---
+
+## 🔐 Secure User Authentication
+![Authentication](./Nexora/Frontend/src/assets/Authentication.png)
+
+---
+
+## 📱 Fully Responsive Design
+![Responsive Design](./Nexora/Frontend/src/assets/Responsive.png)
+
+---
+
+## ⚡ Fast, Modern, and Interactive UI
+![Modern UI](./Nexora/Frontend/src/assets/Modern-UI.png)
+
+---
+
+## 🎨 Clean User Experience
+![Clean UI](./Nexora/Frontend/src/assets/Clean-UI.png)
+
+---
+
+## 🚀 Optimized for Performance
+![Performance](./Nexora/Frontend/src/assets/Performance.png)
