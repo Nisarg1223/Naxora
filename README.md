@@ -85,7 +85,7 @@ Nexora AI is built to provide more than just conversations. It combines AI-power
 
 
 ## shared chat
-<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Share.png"></img>
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Shared.png"></img>
 
 
 ## 📥 Download Chat History
