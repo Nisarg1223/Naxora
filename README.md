@@ -82,36 +82,33 @@ Nexora AI is built to provide more than just conversations. It combines AI-power
 ## 🔗 Share Chats with a Unique Link
 <img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Share.png"></img>
 ---
+
+
 ## shared chat
 <img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Share.png"></img>
+
+
 ## 📥 Download Chat History
-<img src=""></img>
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Download.png"></img>
 
 ---
 
-## 🕒 Conversation History
-<img src=""></img>
+## Downloaded Chat
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Downloaded.png"></img>
+
+## Image Generation
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Image%20Generation.png"></img>
 
 ---
+##Image Gallary
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Image%20Gallary.png"></img>
 
 ## 🔐 Secure User Authentication
-<img src=""></img>
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Authentication.png"></img>
 
 ---
+## Code using Nexora
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Code.png"></img>
 
-## 📱 Fully Responsive Design
-<img src=""></img>
-
----
-
-## ⚡ Fast, Modern, and Interactive UI
-<img src=""></img>
-
----
-
-## 🎨 Clean User Experience
-<img src=""></img>
----
-
-## 🚀 Optimized for Performance
-![Performance](./Nexora/Frontend/src/assets/Performance.png)
+##Sugessions
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Suggesions.png"></img>
