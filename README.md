@@ -63,8 +63,9 @@ Nexora AI is built to provide more than just conversations. It combines AI-power
 
 ## 💬 Intelligent AI Chat
 <img src"https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Home.png"></img>
-<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Chat.png"></img>
+
 ---
+<img src="https://github.com/Nisarg1223/Naxora/blob/main/Perplexity/Frontend/src/assets/Nexora%20Chat.png"></img>
 
 ## 🎙️ AI Voice Assistant
 <img src=""></img>
