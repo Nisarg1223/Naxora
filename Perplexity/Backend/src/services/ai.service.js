@@ -30,7 +30,7 @@ function getGroqModel() {
   if (!_groqModel) {
     _groqModel = new ChatGroq({
       apiKey: process.env.GROQ_API_KEY,
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
     });
   }
   return _groqModel;
